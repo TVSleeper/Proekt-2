@@ -1,625 +1,236 @@
-# Liquidity Manager - Project Architecture
+# AI Agent Team Development Application - Architecture
 
-## 1. System Overview
+## Overview
 
-### 1.1 Architecture Pattern
-**Monorepo** с разделением на frontend и backend (client-server architecture)
+This document describes the architecture of an application designed to be developed by a team of AI Agents. The system is built around autonomous agent orchestration, tool management, and collaborative task execution.
 
+## System Architecture
+
+### 1. Core Components
+
+#### 1.1 Agent Orchestration Layer
+- **Supervisor Agent**: Coordinates task decomposition and delegation
+- **Specialist Agents**: Focused agents for specific domains (backend, frontend, testing, etc.)
+- **Communication Bus**: Message passing between agents
+- **State Manager**: Maintains shared state and context
+
+#### 1.2 Tool Registry & Execution
+- **Tool Registry**: Central registry of available tools and capabilities
+- **Tool Executor**: Executes tools with error handling and recovery
+- **Tool Validator**: Validates tool inputs and outputs
+- **Tool Logger**: Tracks tool usage and performance
+
+#### 1.3 Memory Systems
+- **Working Memory**: Current task context and immediate state
+- **Episodic Memory**: Past interactions, decisions, and results
+- **Semantic Memory**: Learned patterns, best practices, and domain knowledge
+- **RAG System**: Retrieval-Augmented Generation for long-term memory access
+
+#### 1.4 Planning & Reasoning
+- **Task Planner**: Decomposes complex tasks into steps
+- **Reasoning Engine**: Evaluates options and makes decisions
+- **Constraint Solver**: Handles dependencies and constraints
+- **Replanning Module**: Adjusts plans based on execution results
+
+### 2. Agent Types
+
+#### 2.1 Backend Agent
+- Responsibilities: API design, database schema, server logic
+- Tools: Code generation, API testing, database tools
+- Memory: Backend patterns, API standards, performance metrics
+
+#### 2.2 Frontend Agent
+- Responsibilities: UI/UX design, component development, styling
+- Tools: Component generation, design validation, accessibility checks
+- Memory: Design patterns, component libraries, accessibility standards
+
+#### 2.3 Testing Agent
+- Responsibilities: Test strategy, test implementation, quality assurance
+- Tools: Test generation, test execution, coverage analysis
+- Memory: Testing patterns, edge cases, quality metrics
+
+#### 2.4 DevOps Agent
+- Responsibilities: Deployment, infrastructure, monitoring
+- Tools: Infrastructure as Code, deployment automation, monitoring setup
+- Memory: Infrastructure patterns, deployment procedures, best practices
+
+#### 2.5 Documentation Agent
+- Responsibilities: API docs, user guides, architecture documentation
+- Tools: Documentation generation, content validation, formatting
+- Memory: Documentation standards, examples, templates
+
+### 3. Communication Patterns
+
+#### 3.1 Supervisor-Specialist Pattern
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Liquidity Manager                     │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  ┌──────────────┐         ┌──────────────┐              │
-│  │  Frontend    │◄───────►│   Backend    │              │
-│  │  (Next.js)   │  HTTP   │  (Express)   │              │
-│  └──────┬───────┘         └──────┬───────┘              │
-│         │                        │                       │
-│         ▼                        ▼                       │
-│  ┌──────────────┐         ┌──────────────┐              │
-│  │   Browser    │         │  PostgreSQL  │              │
-│  │   Web3 Wallet│         │    Redis     │              │
-│  └──────────────┘         └──────┬───────┘              │
-│                                  │                       │
-│                                  ▼                       │
-│                         ┌──────────────┐                 │
-│                         │  BSC Network  │                │
-│                         │ PancakeSwap  │                 │
-│                         └──────────────┘                 │
-└─────────────────────────────────────────────────────────┘
-```
-
-### 1.2 Design Principles
-- **Separation of Concerns**: Frontend отвечает за UI, Backend за бизнес-логику
-- **Stateless Backend**: Все состояние хранится в БД, backend горизонтально масштабируется
-- **Non-custodial**: Backend никогда не подписывает транзакции, только строит данные
-- **Cache-first**: Redis кеширует frequently-accessed данные
-
----
-
-## 2. Frontend Architecture (Next.js)
-
-### 2.1 Component Hierarchy
-
-```
-App (layout.tsx)
-├── Providers (Web3, Query)
-│
-└── Dashboard (page.tsx)
-    ├── Header
-    │   ├── Logo
-    │   └── WalletConnect
-    │
-    ├── QuickSellToUSDT (Quick Action)
-    │
-    ├── Tab Navigation
-    │   ├── All Pools Tab
-    │   ├── My Positions Tab
-    │   └── Add Liquidity Tab
-    │
-    └── Tab Content
-        ├── PoolList (All Pools)
-        │   ├── PoolFilters
-        │   ├── PoolCard
-        │   │   └── PoolDetails
-        │   └── Pagination
-        │
-        ├── PositionList (My Positions)
-        │   ├── PositionCard
-        │   │   ├── PositionDetails
-        │   │   └── RemoveLiquidityButton
-        │   └── EmptyState
-        │
-        └── AddLiquidityFlow
-            ├── TokenSelector
-            ├── PoolSelector
-            ├── FeeTierSelector
-            ├── RangeSelector
-            │   ├── PriceRangeInput
-            │   └── RangeVisualizer
-            ├── AmountInput (Token0, Token1)
-            ├── PreviewPosition
-            └── ConfirmButton
+Supervisor Agent
+├── Decomposes task
+├── Delegates to specialists
+├── Aggregates results
+└── Handles coordination
 ```
 
-### 2.2 Data Flow Architecture
+#### 3.2 Tool Registry Pattern
+- Agents query registry for available tools
+- Dynamic tool loading based on task requirements
+- Tool versioning and compatibility management
+
+#### 3.3 Memory Sharing
+- Shared semantic memory for domain knowledge
+- Agent-specific episodic memory for task history
+- RAG-based retrieval for relevant context
+
+### 4. Execution Flow
 
 ```
-┌─────────────┐      ┌──────────────┐      ┌─────────────┐
-│   React     │─────►│  API Client  │─────►│   Backend   │
-│ Components  │◄─────│  (Axios)     │◄─────│    API      │
-└──────┬──────┘      └──────────────┘      └─────────────┘
-       │
-       │               ┌──────────────┐
-       │               │  TanStack    │
-       └──────────────►│   React      │
-                       │   Query      │
-                       │ (Caching)    │
-                       └──────────────┘
-
-┌─────────────┐      ┌──────────────┐      ┌─────────────┐
-│   wagmi     │─────►│   ethers.js  │─────►│   BSC RPC   │
-│ (Wallet)    │◄─────│ (Contracts)  │◄─────│ (Node)      │
-└─────────────┘      └──────────────┘      └─────────────┘
+1. Task Input
+   ↓
+2. Supervisor Analysis & Decomposition
+   ↓
+3. Task Distribution to Specialists
+   ↓
+4. Parallel/Sequential Execution
+   ├── Tool Selection
+   ├── Tool Execution
+   ├── Result Validation
+   └── Memory Update
+   ↓
+5. Result Aggregation
+   ↓
+6. Quality Validation
+   ↓
+7. Output Generation
 ```
 
-### 2.3 State Management Layers
+### 5. Error Handling & Recovery
 
-| Layer | Tool | Purpose |
-|-------|------|---------|
-| **Server State** | TanStack React Query | API responses, auto-refetch, caching |
-| **Client State** | Zustand | UI preferences, modals, local state |
-| **Wallet State** | wagmi | Connected address, chain, balance |
-| **Form State** | React Hook Form | Liquidity forms, validation |
+#### 5.1 Failure Modes
+- Tool execution failures → Retry with alternative tools
+- Agent communication failures → Message queue with retry logic
+- Planning failures → Replanning with adjusted constraints
+- Validation failures → Human escalation or alternative approach
 
-### 2.4 Key Files & Responsibilities
+#### 5.2 Checkpoint System
+- Save state after each successful step
+- Resume from last checkpoint on failure
+- Cleanup checkpoints on completion
 
-#### Core Files
-- `layout.tsx` - Root layout, injects Web3 providers
-- `page.tsx` - Dashboard entry point
-- `providers.tsx` - Wagmi + QueryClient setup
+#### 5.3 Circuit Breakers
+- Prevent cascading failures
+- Fallback mechanisms for critical operations
+- Cost caps for API usage
 
-#### Components
-- `WalletConnect.tsx` - Wallet connection UI
-- `dashboard.tsx` - Main dashboard layout
-- `pool/PoolList.tsx` - Pool listing с фильтрами
-- `position/PositionList.tsx` - User positions
-- `token/TokenSelector.tsx` - Token search & selection
-- `quick-actions/QuickSellToUSDT.tsx` - One-click exit button
+### 6. Observability & Monitoring
 
-#### API Integration
-- `lib/api.ts` - Axios API client с endpoints
-- `utils/constants.ts` - Contract addresses, fee tiers, popular tokens
+#### 6.1 Logging
+- Agent thoughts and reasoning
+- Tool calls with inputs/outputs
+- Memory operations
+- Error events and recovery actions
 
-### 2.5 Routing Structure
+#### 6.2 Metrics
+- Task completion rate
+- Average execution time
+- Tool usage patterns
+- Error rates by type
+- Token usage and costs
 
-```
-/                     → Dashboard (default: pools tab)
-/pools                → All pools view
-/pools/[address]      → Pool details
-/positions            → User positions
-/positions/[tokenId]  → Position details
-/add-liquidity        → Add liquidity wizard
-/settings             → App settings (slippage, RPC)
-```
+#### 6.3 Tracing
+- Distributed tracing across agents
+- Request correlation IDs
+- Performance profiling
+- Dependency analysis
 
----
+### 7. Safety & Guardrails
 
-## 3. Backend Architecture (Express.js)
+#### 7.1 Constraints
+- Max iterations per agent loop
+- Max tokens per turn
+- Timeout on agent runs
+- Cost caps for API usage
 
-### 3.1 Layered Architecture
+#### 7.2 Validation
+- Input validation before tool execution
+- Output validation after tool execution
+- Schema validation for all data
+- Permission checks for sensitive operations
 
-```
-┌──────────────────────────────────────────────────────┐
-│                  Express Server                       │
-├──────────────────────────────────────────────────────┤
-│                                                       │
-│  ┌──────────┐    ┌────────────┐    ┌───────────┐    │
-│  │ Routes   │───►│ Controllers│───►│ Services  │    │
-│  │ (HTTP)   │    │ (Request)  │    │ (Business)│    │
-│  └──────────┘    └────────────┘    └─────┬─────┘    │
-│                                          │           │
-│                        ┌─────────────────┼───────┐   │
-│                        ▼                 ▼       │   │
-│                  ┌──────────┐    ┌───────────┐   │   │
-│                  │ TypeORM  │    │  Web3     │   │   │
-│                  │ (DB)     │    │ Service   │   │   │
-│                  └──────────┘    └─────┬─────┘   │   │
-│                                        │         │   │
-│                              ┌─────────┴─────┐   │   │
-│                              ▼               ▼   │   │
-│                        ┌──────────┐   ┌────────┐ │   │
-│                        │PostgreSQL│   │  BSC   │ │   │
-│                        │  Redis   │   │  Node  │ │   │
-│                        └──────────┘   └────────┘ │   │
-└──────────────────────────────────────────────────────┘
-```
+#### 7.3 Audit Trail
+- All agent decisions logged
+- Tool execution history
+- Memory modifications tracked
+- User actions recorded
 
-### 3.2 Module Structure
+### 8. Scalability Considerations
 
-```
-backend/src/
-├── index.ts                 # Entry point, middleware setup
-├── config/
-│   └── env.ts              # Environment configuration
-├── routes/                  # HTTP routes (URL mapping)
-│   ├── pools.ts
-│   ├── tokens.ts
-│   ├── positions.ts
-│   └── transactions.ts
-├── controllers/             # Request handlers (validation → service)
-│   ├── poolController.ts
-│   ├── tokenController.ts
-│   ├── positionController.ts
-│   └── transactionController.ts
-├── services/                # Business logic
-│   ├── poolService.ts
-│   ├── tokenService.ts
-│   ├── positionService.ts
-│   ├── transactionService.ts
-│   ├── priceService.ts
-│   └── web3Service.ts
-├── entities/                # TypeORM database models
-│   ├── Pool.ts
-│   ├── Token.ts
-│   ├── Position.ts
-│   └── Transaction.ts
-├── types/                   # TypeScript interfaces
-│   └── index.ts
-└── utils/
-    └── logger.ts           # Winston logging
-```
+#### 8.1 Horizontal Scaling
+- Stateless agent instances
+- Distributed message queue
+- Shared memory backend (Redis/Database)
+- Load balancing across agents
 
-### 3.3 Service Dependencies
+#### 8.2 Performance Optimization
+- Tool caching for repeated operations
+- Memory compression and cleanup
+- Batch processing where possible
+- Async execution for independent tasks
+
+#### 8.3 Resource Management
+- Token budget allocation per agent
+- Memory limits per agent
+- CPU/GPU resource sharing
+- Cost tracking and optimization
+
+## Technology Stack
+
+- **Agent Framework**: Claude SDK / LangChain / CrewAI
+- **Message Queue**: Redis / RabbitMQ
+- **Memory Store**: PostgreSQL / Vector DB
+- **Monitoring**: Prometheus / ELK Stack
+- **Logging**: Structured logging with correlation IDs
+- **API**: REST / GraphQL
+- **Frontend**: React / Vue / Angular
+- **Backend**: Node.js / Python / Go
+
+## Deployment Architecture
 
 ```
-web3Service.ts (Base)
-    ├── poolService.ts (uses web3Service)
-    ├── tokenService.ts (uses web3Service)
-    ├── positionService.ts (uses web3Service)
-    ├── transactionService.ts (uses web3Service, positionService)
-    └── priceService.ts (uses web3Service, Redis cache)
+┌─────────────────────────────────────────┐
+│         API Gateway / Load Balancer     │
+└──────────────┬──────────────────────────┘
+               │
+    ┌──────────┼──────────┐
+    │          │          │
+┌───▼──┐  ┌───▼──┐  ┌───▼──┐
+│Agent │  │Agent │  │Agent │
+│Pool  │  │Pool  │  │Pool  │
+└───┬──┘  └───┬──┘  └───┬──┘
+    │         │         │
+    └────┬────┴────┬────┘
+         │         │
+    ┌────▼──┐  ┌──▼────┐
+    │Message│  │Memory │
+    │Queue  │  │Store  │
+    └───────┘  └───────┘
 ```
 
-### 3.4 Request Lifecycle
+## Key Design Principles
 
-```
-HTTP Request
-    ↓
-[Middleware] CORS, JSON parsing
-    ↓
-[Route] URL matching
-    ↓
-[Controller] Request validation (Zod)
-    ↓
-[Service] Business logic
-    ↓
-    ├─→ Web3 Service → BSC RPC
-    ├─→ Database → PostgreSQL
-    └─→ Cache → Redis
-    ↓
-[Controller] Format response
-    ↓
-HTTP Response
-    ↓
-[Logger] Log request/response
-```
+1. **Fail Loudly**: Agents should report failures clearly, not silently
+2. **Clear Tool Documentation**: Every tool needs clear specs and examples
+3. **Memory as Context**: Memory supports reasoning, not replaces it
+4. **Planning Reduces Errors**: Good planning minimizes but doesn't eliminate failures
+5. **Justify Complexity**: Multi-agent adds overhead - only use when necessary
+6. **Observable Systems**: Full tracing and logging for debugging
+7. **Graceful Degradation**: System continues with reduced functionality on failures
+8. **Cost Awareness**: Track and optimize token usage and API costs
 
----
+## Future Enhancements
 
-## 4. Data Architecture
-
-### 4.1 Database Schema (PostgreSQL)
-
-```sql
--- Token Table
-CREATE TABLE token (
-    address VARCHAR(42) PRIMARY KEY,
-    symbol VARCHAR(20) NOT NULL,
-    name VARCHAR(100) NOT NULL,
-    decimals INTEGER NOT NULL,
-    logo_uri VARCHAR(255),
-    price_usd DECIMAL(20,8),
-    total_liquidity DECIMAL(30,8),
-    volume_24h DECIMAL(30,8),
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Pool Table
-CREATE TABLE pool (
-    address VARCHAR(42) PRIMARY KEY,
-    token0_address VARCHAR(42) REFERENCES token(address),
-    token1_address VARCHAR(42) REFERENCES token(address),
-    fee INTEGER NOT NULL,
-    tick_spacing INTEGER NOT NULL,
-    sqrt_price_x96 VARCHAR(78),
-    tick INTEGER,
-    liquidity VARCHAR(40),
-    tvl_usd DECIMAL(20,8),
-    volume_24h DECIMAL(30,8),
-    fee_24h DECIMAL(30,8),
-    apr DECIMAL(10,4),
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    
-    INDEX idx_token0 (token0_address),
-    INDEX idx_token1 (token1_address),
-    INDEX idx_tvl (tvl_usd),
-    INDEX idx_apr (apr)
-);
-
--- Position Table
-CREATE TABLE position (
-    id VARCHAR(255) PRIMARY KEY,
-    token_id VARCHAR(78) UNIQUE NOT NULL,
-    owner_address VARCHAR(42) NOT NULL,
-    pool_address VARCHAR(42) REFERENCES pool(address),
-    tick_lower INTEGER NOT NULL,
-    tick_upper INTEGER NOT NULL,
-    liquidity VARCHAR(40),
-    amount0 DECIMAL(30,8),
-    amount1 DECIMAL(30,8),
-    unclaimed_fees0 DECIMAL(30,8),
-    unclaimed_fees1 DECIMAL(30,8),
-    in_range BOOLEAN,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    
-    INDEX idx_owner (owner_address),
-    INDEX idx_pool (pool_address),
-    INDEX idx_range (in_range)
-);
-
--- Transaction Table
-CREATE TABLE transaction (
-    hash VARCHAR(66) PRIMARY KEY,
-    user_address VARCHAR(42) NOT NULL,
-    type VARCHAR(20) NOT NULL, -- 'add', 'remove', 'swap'
-    status VARCHAR(20) NOT NULL, -- 'pending', 'success', 'failed'
-    pool_address VARCHAR(42) REFERENCES pool(address),
-    token_id VARCHAR(78),
-    amount_in DECIMAL(30,8),
-    amount_out DECIMAL(30,8),
-    gas_used DECIMAL(20,2),
-    timestamp TIMESTAMP DEFAULT NOW(),
-    
-    INDEX idx_user (user_address),
-    INDEX idx_status (status),
-    INDEX idx_timestamp (timestamp)
-);
-```
-
-### 4.2 Redis Cache Architecture
-
-```
-Redis Structure:
-├── pool:list:{filters}          → JSON array of pools (TTL: 60s)
-├── pool:details:{address}       → JSON pool details (TTL: 30s)
-├── token:price:{address}        → JSON price data (TTL: 30s)
-├── position:user:{wallet}       → JSON positions (TTL: 60s)
-└── apr:calculation:{pool}       → JSON APR data (TTL: 300s)
-
-Cache Strategy:
-1. Check Redis → if hit, return immediately
-2. If miss → query blockchain/DB → cache → return
-3. Background jobs refresh cache periodically
-```
-
----
-
-## 5. Smart Contract Integration Architecture
-
-### 5.1 Contract Interaction Flow
-
-```
-Frontend Component
-    ↓
-[Build Request] POST /api/positions/add
-    ↓
-Backend Position Service
-    ↓
-[Web3 Service] Reads contract ABI
-    ↓
-[Contract Call] positionManager.mint.populateTransaction()
-    ↓
-[Return] Transaction data {to, data, value}
-    ↓
-Frontend receives tx data
-    ↓
-[wagmi] wallet.sendTransaction(tx)
-    ↓
-User signs in MetaMask
-    ↓
-Transaction broadcast to BSC
-    ↓
-Backend monitors tx status
-```
-
-### 5.2 Contract Call Patterns
-
-**Read Operations (Direct to RPC):**
-```typescript
-// Pool data
-pool.slot0()
-pool.liquidity()
-pool.token0()
-pool.token1()
-
-// User data
-positionManager.balanceOf(wallet)
-positionManager.positions(tokenId)
-```
-
-**Write Operations (User Signs):**
-```typescript
-// Add liquidity
-positionManager.mint(params)
-
-// Remove liquidity
-positionManager.decreaseLiquidity(params)
-positionManager.collect(params)
-
-// Swap
-router.exactInputSingle(params)
-```
-
-### 5.3 Multi-Contract Transaction Flow (Quick Exit)
-
-```
-User clicks "Quick Exit to USDT"
-    ↓
-Backend builds 4 transactions:
-    1. decreaseLiquidity(tokenId, liquidity)
-    2. collect(tokenId) → claim token0 & token1
-    3. exactInputSingle(token0 → USDT)
-    4. exactInputSingle(token1 → USDT)
-    ↓
-Frontend executes sequentially:
-    await tx1.wait()
-    await tx2.wait()
-    await tx3.wait()
-    await tx4.wait()
-    ↓
-USDT received in wallet
-```
-
----
-
-## 6. Background Jobs Architecture
-
-### 6.1 Pool Scanner (Every 5 minutes)
-
-```
-┌──────────────┐
-│ Cron Trigger │
-└──────┬───────┘
-       ↓
-┌──────────────────────────────────┐
-│ Scan Factory Events              │
-│ - PoolCreated(last 10k blocks)   │
-└──────┬───────────────────────────┘
-       ↓
-┌──────────────────────────────────┐
-│ For Each New Pool:               │
-│ - Fetch pool data                │
-│ - Fetch token info               │
-│ - Calculate initial metrics      │
-│ - Save to database               │
-└──────┬───────────────────────────┘
-       ↓
-┌──────────────────────────────────┐
-│ Update Existing Pools:           │
-│ - TVL, Volume, APR               │
-│ - Token prices                   │
-└──────┬───────────────────────────┘
-       ↓
-┌──────────────────────────────────┐
-│ Invalidate Redis Cache           │
-└──────────────────────────────────┘
-```
-
-### 6.2 Position Monitor (Every 1 minute)
-
-```
-┌──────────────┐
-│ Cron Trigger │
-└──────┬───────┘
-       ↓
-┌──────────────────────────────────┐
-│ For Each Active Position:        │
-│ - Check current tick             │
-│ - Determine in/out of range      │
-│ - Update unclaimed fees          │
-└──────┬───────────────────────────┘
-       ↓
-┌──────────────────────────────────┐
-│ If position went out of range:   │
-│ - Update database                │
-│ - Trigger notification (future)  │
-└──────────────────────────────────┘
-```
-
----
-
-## 7. Security Architecture
-
-### 7.1 Threat Model
-
-| Threat | Mitigation |
-|--------|-----------|
-| Private key theft | Never stored, only MetaMask/WalletConnect |
-| Transaction replay | Deadline parameter on all txs |
-| Slippage attacks | Min output amounts enforced |
-| API abuse | Rate limiting (future), input validation |
-| SQL injection | TypeORM parameterized queries |
-| XSS | Next.js CSP headers, sanitized inputs |
-
-### 7.2 Permission Model
-
-```
-User Wallet (MetaMask)
-    ├── Can: Read all public data
-    ├── Can: Build transactions
-    ├── Can: Sign transactions
-    └── Cannot: Backend sign on behalf of user
-    
-Backend Server
-    ├── Can: Read blockchain data
-    ├── Can: Build transaction data
-    ├── Can: Cache data in Redis
-    └── Cannot: Sign transactions
-    └── Cannot: Access user funds
-```
-
----
-
-## 8. Deployment Architecture
-
-### 8.1 Production Setup
-
-```
-┌──────────────────────────────────────────────────┐
-│                  Frontend (Vercel)                │
-│  CDN → Edge Network → Next.js Static/SSR         │
-└────────────────────────┬─────────────────────────┘
-                         │ HTTPS
-                         ↓
-┌──────────────────────────────────────────────────┐
-│               Backend (Railway)                   │
-│  Load Balancer → Express Instances (x2+)         │
-└────────┬──────────────┬──────────────┬───────────┘
-         │              │              │
-         ↓              ↓              ↓
-    ┌────────┐   ┌──────────┐   ┌─────────┐
-    │PostgreSQL│  │  Redis   │   │ BSC RPC │
-    │Supabase  │  │  Upstash │   │  Node   │
-    └────────┘   └──────────┘   └─────────┘
-```
-
-### 8.2 Environment Separation
-
-| Environment | Purpose | URL |
-|-------------|---------|-----|
-| Development | Local dev | localhost:3000/3001 |
-| Staging | Testing | staging.liquidity-manager.com |
-| Production | Live | app.liquidity-manager.com |
-
----
-
-## 9. Monitoring & Observability
-
-### 9.1 Logging Strategy
-
-```
-Frontend:
-├── Console logs (dev only)
-└── Error tracking → Sentry (future)
-
-Backend:
-├── Winston Logger
-├── Application logs → logs/combined.log
-├── Error logs → logs/error.log
-└── Structured JSON format
-```
-
-### 9.2 Key Metrics to Track
-
-- API response times (p50, p95, p99)
-- Database query times
-- Redis hit/miss ratio
-- Blockchain RPC errors
-- Transaction success rate
-- User active sessions
-
----
-
-## 10. Future Architecture Extensions
-
-### 10.1 V4 Integration (Hooks)
-
-```
-Current V3 Architecture:
-positionManager.mint() → NFT position
-
-Future V4 Architecture:
-positionManager.modifyLiquidities() → Hook calls
-    ├── Custom logic hooks
-    ├── Dynamic fees
-    ├── Limit orders
-    └── Auto-compounding
-```
-
-### 10.2 Multi-chain Architecture
-
-```
-Current: Single chain (BSC)
-    ↓
-Future: Multi-chain
-├── ChainRegistry Service
-├── Per-chain RPC providers
-├── Per-chain subgraphs
-├── Cross-chain position aggregation
-└── Bridge integration
-```
-
----
-
-## 11. Technology Decisions Rationale
-
-| Decision | Choice | Reason |
-|----------|--------|--------|
-| Next.js App Router | ✅ | Server components, better SEO, modern |
-| ethers.js v6 | ✅ | Better TypeScript, modern API |
-| wagmi | ✅ | React hooks for Web3, wallet management |
-| PostgreSQL | ✅ | Relational data, complex queries |
-| Redis | ✅ | Fast cache, simple key-value |
-| Express | ✅ | Simple, well-understood, good for REST |
-| TypeORM | ✅ | TypeScript-first, active record pattern |
-| TailwindCSS | ✅ | Rapid development, consistent design |
-
----
-
-**Version**: 1.0.0  
-**Last Updated**: 2026-04-10  
-**Maintained By**: Liquidity Manager Team
+- Fine-tuned models for specific agent roles
+- Advanced planning with constraint satisfaction
+- Hierarchical agent structures for complex tasks
+- Learning from past executions
+- Human-in-the-loop for critical decisions
+- Multi-modal agent capabilities
+- Cross-agent knowledge transfer
