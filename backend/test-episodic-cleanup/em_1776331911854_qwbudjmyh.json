@@ -1,0 +1,14 @@
+{
+  "agentId": "agent-1",
+  "actionType": "test-action",
+  "observation": {
+    "data": "test"
+  },
+  "result": {
+    "data": "result"
+  },
+  "success": true,
+  "content": {},
+  "id": "em_1776331911854_qwbudjmyh",
+  "timestamp": "2026-04-16T09:31:51.854Z"
+}

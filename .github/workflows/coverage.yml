@@ -1,0 +1,96 @@
+name: Coverage Report
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: agent_user
+          POSTGRES_PASSWORD: agent_password
+          POSTGRES_DB: agent_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm run install:all
+
+      - name: Run backend tests with coverage
+        run: cd backend && npm test -- --coverage --passWithNoTests
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: agent_user
+          DB_PASSWORD: agent_password
+          DB_NAME: agent_db
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+      - name: Check coverage threshold
+        run: |
+          cd backend
+          COVERAGE=$(cat coverage/coverage-summary.json | grep -o '"lines"[^}]*' | grep -o '[0-9.]*' | head -1)
+          echo "Coverage: $COVERAGE%"
+          if (( $(echo "$COVERAGE < 85" | bc -l) )); then
+            echo "Coverage is below 85% threshold"
+            exit 1
+          fi
+        continue-on-error: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage/coverage-final.json
+          flags: backend
+          name: backend-coverage
+          fail_ci_if_error: false
+
+      - name: Comment PR with coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: >
+            const fs = require('fs');
+            const coverage = JSON.parse(fs.readFileSync('./backend/coverage/coverage-summary.json', 'utf8'));
+            const total = coverage.total;
+            const comment = `## Coverage Report\n\n| Metric | Coverage |\n|--------|----------|\n| Lines | ${total.lines.pct}% |\n| Statements | ${total.statements.pct}% |\n| Functions | ${total.functions.pct}% |\n| Branches | ${total.branches.pct}% |\n\n**Threshold:** 85%\n**Status:** ${total.lines.pct >= 85 ? '✅ Pass' : '❌ Fail'}`;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+        continue-on-error: true

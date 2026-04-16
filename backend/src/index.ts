@@ -2,10 +2,11 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import { config } from './config/env';
 import { logger } from './utils/logger';
-import { poolRoutes } from './routes/pools';
+import { pool_routes } from './routes/pools';
 import { token_routes } from './routes/tokens';
 import { position_routes } from './routes/positions';
 import { transaction_routes } from './routes/transactions';
+import dashboardRoutes from './routes/dashboard';
 
 const app: Application = express();
 
@@ -19,6 +20,7 @@ app.use('/api/pools', pool_routes);
 app.use('/api/tokens', token_routes);
 app.use('/api/positions', position_routes);
 app.use('/api/transactions', transaction_routes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

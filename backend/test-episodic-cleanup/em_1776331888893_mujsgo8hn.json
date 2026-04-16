@@ -1,0 +1,14 @@
+{
+  "agentId": "agent-1",
+  "actionType": "test-action",
+  "observation": {
+    "data": "test"
+  },
+  "result": {
+    "data": "result"
+  },
+  "success": true,
+  "content": {},
+  "id": "em_1776331888893_mujsgo8hn",
+  "timestamp": "2026-04-16T09:31:28.893Z"
+}

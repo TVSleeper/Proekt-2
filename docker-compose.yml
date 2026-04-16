@@ -1,0 +1,99 @@
+version: "3.8"
+
+services:
+  # Redis for message queue
+  redis:
+    image: redis:7-alpine
+    container_name: agent-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - agent-network
+
+  # PostgreSQL for state persistence
+  postgres:
+    image: postgres:15-alpine
+    container_name: agent-postgres
+    environment:
+      POSTGRES_USER: agent_user
+      POSTGRES_PASSWORD: agent_password
+      POSTGRES_DB: agent_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent_user"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - agent-network
+
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agent-backend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: agent_user
+      DB_PASSWORD: agent_password
+      DB_NAME: agent_db
+      LOG_LEVEL: debug
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/tests:/app/tests
+    networks:
+      - agent-network
+    command: npm run dev
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agent-frontend
+    ports:
+      - "3001:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3000
+      NODE_ENV: development
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    networks:
+      - agent-network
+    command: npm run dev
+
+volumes:
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+
+networks:
+  agent-network:
+    driver: bridge

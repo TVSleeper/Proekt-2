@@ -1,11 +1,10 @@
 'use client';
 
-import { WagmiConfig, createConfig, http } from 'wagmi';
-import { bsc } from 'wagmi/chains';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createWeb3Modal } from '@web3modal/wagmi/react';
-import { defaultWagmiConfig } from '@web3modal/wagmi/react/config';
 import { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { WagmiProvider, createConfig, http } from 'wagmi';
+import { bsc } from 'wagmi/chains';
+import { walletConnect, injected } from 'wagmi/connectors';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,28 +16,25 @@ const queryClient = new QueryClient({
   },
 });
 
-const metadata = {
-  name: 'Liquidity Manager',
-  description: 'Manage liquidity positions on PancakeSwap V3/V4',
-  url: 'http://localhost:3000',
-  icons: ['https://avatars.githubusercontent.com/u/37784886'],
-};
+const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'your_project_id';
 
-const chains = [bsc];
-
-const wagmiConfig = defaultWagmiConfig({
-  chains,
-  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'your_project_id',
-  metadata,
-  enableEIP6963: true,
+const config = createConfig({
+  chains: [bsc],
+  connectors: [
+    injected(),
+    walletConnect({ projectId }),
+  ],
+  transports: {
+    [bsc.id]: http(),
+  },
 });
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
-    <WagmiConfig config={wagmiConfig}>
+    <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         {children}
       </QueryClientProvider>
-    </WagmiConfig>
+    </WagmiProvider>
   );
 }
