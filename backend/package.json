@@ -11,7 +11,7 @@
     "lint": "eslint src/**/*.ts"
   },
   "dependencies": {
-    "@types/ioredis": "^4.28.10",
+    "@types/ioredis": "^5.0.0",
     "axios": "^1.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.0",
